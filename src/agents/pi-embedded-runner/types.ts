@@ -28,6 +28,8 @@ export type EmbeddedPiAgentMeta = {
     cacheWrite?: number;
     total?: number;
   };
+  /** Provider response ID from the last assistant message (Responses API). */
+  lastResponseId?: string;
 };
 
 export type EmbeddedPiRunMeta = {

@@ -1,0 +1,27 @@
+diff --git a/dist/providers/openai-responses-shared.js b/dist/providers/openai-responses-shared.js
+index 00c580181f377cb81a3324573950e3ffa1d77751..ff95fd46c8091b8b292d0036846559f96532cd82 100644
+--- a/dist/providers/openai-responses-shared.js
++++ b/dist/providers/openai-responses-shared.js
+@@ -372,6 +372,9 @@ export async function processResponsesStream(openaiStream, output, stream, model
+         }
+         else if (event.type === "response.completed") {
+             const response = event.response;
++            if (response?.id) {
++                output.responseId = response.id;
++            }
+             if (response?.usage) {
+                 const cachedTokens = response.usage.input_tokens_details?.cached_tokens || 0;
+                 output.usage = {
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+index 422740345a75f9cb95bf77375e66a14cb583cad3..d764e0fd71c3d17013a67c713d730517a446ce3b 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -119,6 +119,8 @@ export interface AssistantMessage {
+     stopReason: StopReason;
+     errorMessage?: string;
+     timestamp: number;
++    /** Provider response ID (Responses API). Enables `previous_response_id` conversation chaining. */
++    responseId?: string;
+ }
+ export interface ToolResultMessage<TDetails = any> {
+     role: "toolResult";

@@ -982,6 +982,7 @@ export async function runEmbeddedPiAgent(
           // the final call, giving an accurate snapshot of current context.
           const lastCallUsage = normalizeUsage(lastAssistant?.usage as UsageLike);
           const promptTokens = derivePromptTokens(lastRunPromptUsage);
+          const lastResponseId = (lastAssistant as { responseId?: string } | undefined)?.responseId;
           const agentMeta: EmbeddedPiAgentMeta = {
             sessionId: sessionIdUsed,
             provider: lastAssistant?.provider ?? provider,
@@ -990,6 +991,7 @@ export async function runEmbeddedPiAgent(
             lastCallUsage: lastCallUsage ?? undefined,
             promptTokens,
             compactionCount: autoCompactionCount > 0 ? autoCompactionCount : undefined,
+            lastResponseId: lastResponseId || undefined,
           };
 
           const payloads = buildEmbeddedRunPayloads({

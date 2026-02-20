@@ -82,6 +82,14 @@ export async function updateSessionStoreAfterAgentRun(params: {
       next.reasoningTokens = usage.reasoningTokens;
     }
   }
+  // Persist provider response ID for previous_response_id chaining (B5).
+  const lastResponseId = result.meta.agentMeta?.lastResponseId;
+  if (lastResponseId) {
+    next.lastResponseId = lastResponseId;
+  } else if (next.lastResponseId && providerUsed !== entry.modelProvider) {
+    // Clear stale response ID when provider changes (ID is provider-specific).
+    delete next.lastResponseId;
+  }
   if (compactionsThisRun > 0) {
     next.compactionCount = (entry.compactionCount ?? 0) + compactionsThisRun;
   }

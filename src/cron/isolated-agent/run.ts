@@ -544,6 +544,10 @@ export async function runCronIsolatedAgentTurn(params: {
       if (usage.reasoningTokens && usage.reasoningTokens > 0) {
         cronSession.sessionEntry.reasoningTokens = usage.reasoningTokens;
       }
+      const cronLastResponseId = result.meta.agentMeta?.lastResponseId;
+      if (cronLastResponseId) {
+        cronSession.sessionEntry.lastResponseId = cronLastResponseId;
+      }
 
       telemetry = {
         model: modelUsed,
