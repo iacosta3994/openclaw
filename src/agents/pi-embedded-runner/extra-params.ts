@@ -382,7 +382,10 @@ export function applyExtraParamsToAgent(
   }
 
   // Apply explicit store parameter when provided (e.g., store=false for cron/subagent sessions).
-  const explicitStore = extraParamsOverride?.store;
+  // When no explicit store is set, default to store=true so xAI retains responses
+  // server-side for previous_response_id chaining on the next turn.
+  // (pi-ai hardcodes store=false for Responses API, which breaks chaining.)
+  const explicitStore = extraParamsOverride?.store ?? true;
   if (typeof explicitStore === "boolean") {
     log.debug(`applying explicit store=${explicitStore} for ${provider}/${modelId}`);
     const prevStreamFn = agent.streamFn ?? streamSimple;
