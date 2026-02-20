@@ -81,6 +81,7 @@ type UsageAccumulator = {
   cacheRead: number;
   cacheWrite: number;
   total: number;
+  reasoningTokens: number;
   /** Cache fields from the most recent API call (not accumulated). */
   lastCacheRead: number;
   lastCacheWrite: number;
@@ -93,6 +94,7 @@ const createUsageAccumulator = (): UsageAccumulator => ({
   cacheRead: 0,
   cacheWrite: 0,
   total: 0,
+  reasoningTokens: 0,
   lastCacheRead: 0,
   lastCacheWrite: 0,
   lastInput: 0,
@@ -121,6 +123,7 @@ const mergeUsageIntoAccumulator = (
   target.output += usage.output ?? 0;
   target.cacheRead += usage.cacheRead ?? 0;
   target.cacheWrite += usage.cacheWrite ?? 0;
+  target.reasoningTokens += usage.reasoningTokens ?? 0;
   target.total +=
     usage.total ??
     (usage.input ?? 0) + (usage.output ?? 0) + (usage.cacheRead ?? 0) + (usage.cacheWrite ?? 0);
@@ -138,6 +141,7 @@ const toNormalizedUsage = (usage: UsageAccumulator) => {
     usage.output > 0 ||
     usage.cacheRead > 0 ||
     usage.cacheWrite > 0 ||
+    usage.reasoningTokens > 0 ||
     usage.total > 0;
   if (!hasUsage) {
     return undefined;
@@ -157,6 +161,7 @@ const toNormalizedUsage = (usage: UsageAccumulator) => {
     cacheRead: usage.lastCacheRead || undefined,
     cacheWrite: usage.lastCacheWrite || undefined,
     total: lastPromptTokens + usage.output || undefined,
+    reasoningTokens: usage.reasoningTokens || undefined,
   };
 };
 

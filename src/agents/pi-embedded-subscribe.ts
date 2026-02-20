@@ -84,6 +84,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     cacheRead: 0,
     cacheWrite: 0,
     total: 0,
+    reasoningTokens: 0,
   };
   let compactionCount = 0;
 
@@ -264,6 +265,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     usageTotals.output += usage.output ?? 0;
     usageTotals.cacheRead += usage.cacheRead ?? 0;
     usageTotals.cacheWrite += usage.cacheWrite ?? 0;
+    usageTotals.reasoningTokens += usage.reasoningTokens ?? 0;
     const usageTotal =
       usage.total ??
       (usage.input ?? 0) + (usage.output ?? 0) + (usage.cacheRead ?? 0) + (usage.cacheWrite ?? 0);
@@ -275,6 +277,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
       usageTotals.output > 0 ||
       usageTotals.cacheRead > 0 ||
       usageTotals.cacheWrite > 0 ||
+      usageTotals.reasoningTokens > 0 ||
       usageTotals.total > 0;
     if (!hasUsage) {
       return undefined;
@@ -287,6 +290,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
       cacheRead: usageTotals.cacheRead || undefined,
       cacheWrite: usageTotals.cacheWrite || undefined,
       total: usageTotals.total || derivedTotal || undefined,
+      reasoningTokens: usageTotals.reasoningTokens || undefined,
     };
   };
   const incrementCompactionCount = () => {

@@ -20,6 +20,11 @@ export type UsageLike = {
   total_tokens?: number;
   cache_read?: number;
   cache_write?: number;
+  // Reasoning token fields (xAI, OpenAI).
+  reasoningTokens?: number;
+  reasoning_tokens?: number;
+  completion_tokens_details?: { reasoning_tokens?: number };
+  output_tokens_details?: { reasoning_tokens?: number };
 };
 
 export type NormalizedUsage = {
@@ -28,6 +33,7 @@ export type NormalizedUsage = {
   cacheRead?: number;
   cacheWrite?: number;
   total?: number;
+  reasoningTokens?: number;
 };
 
 const asFiniteNumber = (value: unknown): number | undefined => {
@@ -44,7 +50,7 @@ export function hasNonzeroUsage(usage?: NormalizedUsage | null): usage is Normal
   if (!usage) {
     return false;
   }
-  return [usage.input, usage.output, usage.cacheRead, usage.cacheWrite, usage.total].some(
+  return [usage.input, usage.output, usage.cacheRead, usage.cacheWrite, usage.total, usage.reasoningTokens].some(
     (v) => typeof v === "number" && Number.isFinite(v) && v > 0,
   );
 }
@@ -69,13 +75,20 @@ export function normalizeUsage(raw?: UsageLike | null): NormalizedUsage | undefi
     raw.cacheWrite ?? raw.cache_write ?? raw.cache_creation_input_tokens,
   );
   const total = asFiniteNumber(raw.total ?? raw.totalTokens ?? raw.total_tokens);
+  const reasoningTokens = asFiniteNumber(
+    raw.reasoningTokens ??
+      raw.reasoning_tokens ??
+      raw.completion_tokens_details?.reasoning_tokens ??
+      raw.output_tokens_details?.reasoning_tokens,
+  );
 
   if (
     input === undefined &&
     output === undefined &&
     cacheRead === undefined &&
     cacheWrite === undefined &&
-    total === undefined
+    total === undefined &&
+    reasoningTokens === undefined
   ) {
     return undefined;
   }
@@ -86,6 +99,7 @@ export function normalizeUsage(raw?: UsageLike | null): NormalizedUsage | undefi
     cacheRead,
     cacheWrite,
     total,
+    reasoningTokens,
   };
 }
 

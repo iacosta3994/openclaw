@@ -162,6 +162,7 @@ export async function getStatusSummary(
           outputTokens: entry?.outputTokens,
           cacheRead: entry?.cacheRead,
           cacheWrite: entry?.cacheWrite,
+          reasoningTokens: entry?.reasoningTokens,
           totalTokens: total ?? null,
           totalTokensFresh,
           remainingTokens: remaining,

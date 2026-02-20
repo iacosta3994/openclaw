@@ -19,6 +19,7 @@ export type SessionStatus = {
   totalTokensFresh: boolean;
   cacheRead?: number;
   cacheWrite?: number;
+  reasoningTokens?: number;
   remainingTokens: number | null;
   percentUsed: number | null;
   model: string | null;

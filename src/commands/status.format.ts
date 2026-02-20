@@ -23,7 +23,7 @@ export const shortenText = (value: string, maxLen: number) => {
 export const formatTokensCompact = (
   sess: Pick<
     SessionStatus,
-    "totalTokens" | "contextTokens" | "percentUsed" | "cacheRead" | "cacheWrite"
+    "totalTokens" | "contextTokens" | "percentUsed" | "cacheRead" | "cacheWrite" | "reasoningTokens"
   >,
 ) => {
   const used = sess.totalTokens;
@@ -49,6 +49,12 @@ export const formatTokensCompact = (
         : cacheRead + (typeof cacheWrite === "number" ? cacheWrite : 0);
     const hitRate = Math.round((cacheRead / total) * 100);
     result += ` · 🗄️ ${hitRate}% cached`;
+  }
+
+  // Show reasoning token count if present
+  const reasoning = sess.reasoningTokens;
+  if (typeof reasoning === "number" && reasoning > 0) {
+    result += ` [${formatKTokens(reasoning)} reasoning]`;
   }
 
   return result;

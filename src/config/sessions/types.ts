@@ -89,8 +89,15 @@ export type SessionEntry = {
   fallbackNoticeSelectedModel?: string;
   fallbackNoticeActiveModel?: string;
   fallbackNoticeReason?: string;
+  reasoningTokens?: number;
   contextTokens?: number;
   compactionCount?: number;
+  /**
+   * Last xAI/OpenAI Responses API response ID for conversation chaining.
+   * When set, enables `previous_response_id` on subsequent turns to avoid
+   * resending full conversation history. Cleared on compaction or provider change.
+   */
+  lastResponseId?: string;
   memoryFlushAt?: number;
   memoryFlushCompactionCount?: number;
   cliSessionIds?: Record<string, string>;

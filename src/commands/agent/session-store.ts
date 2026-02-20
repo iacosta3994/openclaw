@@ -78,6 +78,9 @@ export async function updateSessionStoreAfterAgentRun(params: {
     next.totalTokensFresh = true;
     next.cacheRead = usage.cacheRead ?? 0;
     next.cacheWrite = usage.cacheWrite ?? 0;
+    if (usage.reasoningTokens && usage.reasoningTokens > 0) {
+      next.reasoningTokens = usage.reasoningTokens;
+    }
   }
   if (compactionsThisRun > 0) {
     next.compactionCount = (entry.compactionCount ?? 0) + compactionsThisRun;
