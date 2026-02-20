@@ -400,26 +400,63 @@ export function applyExtraParamsToAgent(
     };
   }
 
-  // Inject previous_response_id for Responses API conversation chaining when available.
-  // This allows the server to maintain conversation state, reducing per-turn input tokens
-  // from ~500K to ~2-5K. Requires store=true on the previous response.
+  // Inject previous_response_id for Responses API conversation chaining.
+  // On the FIRST API call of each run, this:
+  // 1. Sets previous_response_id so the server uses its stored conversation state
+  // 2. Moves the system/developer prompt from input[] to the `instructions` field
+  //    (so the model always sees the latest system prompt, not the stale cached one)
+  // 3. Trims input[] to only the last user message (the new prompt)
+  // This reduces per-turn input tokens from ~full context to ~system prompt + new message.
   //
-  // NOTE: Response ID extraction is not yet implemented — pi-ai does not currently expose
-  // the response `id` field from API responses. When pi-ai adds support (e.g., an
-  // `onResponse` callback or `responseId` field on AssistantMessage), wire it into
-  // options.previousResponseId to activate this optimization.
+  // Subsequent calls within the same run (tool-use continuations) use full history
+  // as normal, since we don't have the intermediate response IDs to chain them.
   const previousResponseId = options?.previousResponseId;
   if (typeof previousResponseId === "string" && previousResponseId.length > 0) {
-    log.debug(`injecting previous_response_id for ${provider}/${modelId}`);
+    log.debug(`activating previous_response_id chaining for ${provider}/${modelId}`);
     const prevStreamFn = agent.streamFn ?? streamSimple;
+    let callCount = 0;
     agent.streamFn = (model, context, streamOpts) => {
+      callCount++;
+      if (callCount > 1) {
+        // Tool-use continuation — use full history without previous_response_id
+        return prevStreamFn(model, context, streamOpts);
+      }
       const origOnPayload = streamOpts?.onPayload;
       return prevStreamFn(model, context, {
         ...streamOpts,
         onPayload: (payload) => {
           if (payload && typeof payload === "object") {
-            (payload as { previous_response_id?: string }).previous_response_id =
-              previousResponseId;
+            const p = payload as {
+              previous_response_id?: string;
+              instructions?: string;
+              input?: Array<{ role?: string; type?: string; content?: unknown }>;
+            };
+            p.previous_response_id = previousResponseId;
+
+            // Move the system/developer message to `instructions` so it gets
+            // updated on each turn (previous_response_id reuses old instructions).
+            const input = p.input;
+            if (Array.isArray(input) && input.length > 0) {
+              const firstItem = input[0];
+              if (
+                firstItem &&
+                (firstItem.role === "system" || firstItem.role === "developer") &&
+                typeof firstItem.content === "string"
+              ) {
+                p.instructions = firstItem.content;
+              }
+              // Keep only the last user message in input (the new prompt).
+              // Everything else is already in the server's conversation state.
+              const lastUserIndex = input.findLastIndex((item) => item.role === "user");
+              if (lastUserIndex >= 0) {
+                p.input = input.slice(lastUserIndex);
+              }
+            }
+
+            log.debug(
+              `previous_response_id injected: ${previousResponseId.slice(0, 20)}... ` +
+                `input trimmed from ${input?.length ?? 0} to ${p.input?.length ?? 0} items`,
+            );
           }
           origOnPayload?.(payload);
         },

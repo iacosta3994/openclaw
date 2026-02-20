@@ -101,4 +101,6 @@ export type RunEmbeddedPiAgentParams = {
   streamParams?: AgentStreamParams;
   ownerNumbers?: string[];
   enforceFinalTag?: boolean;
+  /** Last provider response ID for `previous_response_id` chaining (Responses API). */
+  lastResponseId?: string;
 };

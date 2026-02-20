@@ -493,6 +493,7 @@ export async function runCronIsolatedAgentTurn(params: {
           requireExplicitMessageTarget: true,
           disableMessageTool: deliveryRequested,
           streamParams: { store: false },
+          lastResponseId: cronSession.sessionEntry.lastResponseId,
         });
       },
     });

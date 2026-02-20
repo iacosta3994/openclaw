@@ -83,8 +83,13 @@ export async function updateSessionStoreAfterAgentRun(params: {
     }
   }
   // Persist provider response ID for previous_response_id chaining (B5).
+  // Clear when: (a) provider changed, (b) compaction rewrites local history
+  // (server state no longer matches), (c) no new ID was returned.
   const lastResponseId = result.meta.agentMeta?.lastResponseId;
-  if (lastResponseId) {
+  if (compactionsThisRun > 0) {
+    // Compaction rewrites the local conversation — server's stored state is now stale.
+    delete next.lastResponseId;
+  } else if (lastResponseId) {
     next.lastResponseId = lastResponseId;
   } else if (next.lastResponseId && providerUsed !== entry.modelProvider) {
     // Clear stale response ID when provider changes (ID is provider-specific).

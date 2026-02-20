@@ -654,7 +654,7 @@ export async function runEmbeddedAttempt(
         params.modelId,
         effectiveStreamParams,
         providerConfig?.headers,
-        { isReasoningModel },
+        { isReasoningModel, previousResponseId: params.lastResponseId },
       );
 
       if (cacheTrace) {
