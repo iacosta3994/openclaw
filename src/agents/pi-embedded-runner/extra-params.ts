@@ -364,22 +364,25 @@ export function applyExtraParamsToAgent(
 
   // For xAI reasoning models, request encrypted reasoning content so it can be
   // replayed on subsequent turns to reduce re-reasoning costs.
-  if (provider === "xai" && options?.isReasoningModel) {
-    log.debug(`requesting encrypted reasoning content for ${provider}/${modelId}`);
-    const prevStreamFn = agent.streamFn ?? streamSimple;
-    agent.streamFn = (model, context, streamOpts) => {
-      const origOnPayload = streamOpts?.onPayload;
-      return prevStreamFn(model, context, {
-        ...streamOpts,
-        onPayload: (payload) => {
-          if (payload && typeof payload === "object") {
-            (payload as { include?: string[] }).include = ["reasoning.encrypted_content"];
-          }
-          origOnPayload?.(payload);
-        },
-      });
-    };
-  }
+  // DISABLED: pi-ai discards the encrypted content from the response stream,
+  // so requesting it just increases response payload size with no benefit.
+  // Re-enable when pi-ai is patched to expose encrypted reasoning content.
+  // if (provider === "xai" && options?.isReasoningModel) {
+  //   log.debug(`requesting encrypted reasoning content for ${provider}/${modelId}`);
+  //   const prevStreamFn = agent.streamFn ?? streamSimple;
+  //   agent.streamFn = (model, context, streamOpts) => {
+  //     const origOnPayload = streamOpts?.onPayload;
+  //     return prevStreamFn(model, context, {
+  //       ...streamOpts,
+  //       onPayload: (payload) => {
+  //         if (payload && typeof payload === "object") {
+  //           (payload as { include?: string[] }).include = ["reasoning.encrypted_content"];
+  //         }
+  //         origOnPayload?.(payload);
+  //       },
+  //     });
+  //   };
+  // }
 
   // Apply explicit store parameter when provided (e.g., store=false for cron/subagent sessions).
   // When no explicit store is set, default to store=true so xAI retains responses
