@@ -50,6 +50,10 @@ export async function persistSessionUsageUpdate(params: {
   systemPromptReport?: SessionSystemPromptReport;
   cliSessionId?: string;
   logLabel?: string;
+  /** Provider response ID for `previous_response_id` chaining (B5). */
+  lastResponseId?: string;
+  /** Number of compactions this run (clears lastResponseId when > 0). */
+  compactionCount?: number;
 }): Promise<void> {
   const { storePath, sessionKey } = params;
   if (!storePath || !sessionKey) {
@@ -97,6 +101,19 @@ export async function persistSessionUsageUpdate(params: {
             systemPromptReport: params.systemPromptReport ?? entry.systemPromptReport,
             updatedAt: Date.now(),
           };
+          // Persist reasoning tokens when available.
+          if (params.usage?.reasoningTokens && params.usage.reasoningTokens > 0) {
+            patch.reasoningTokens = params.usage.reasoningTokens;
+          }
+          // Persist provider response ID for previous_response_id chaining (B5).
+          const compactions = params.compactionCount ?? 0;
+          if (compactions > 0) {
+            patch.lastResponseId = undefined;
+          } else if (params.lastResponseId) {
+            patch.lastResponseId = params.lastResponseId;
+          } else if (entry.lastResponseId && params.providerUsed !== entry.modelProvider) {
+            patch.lastResponseId = undefined;
+          }
           return applyCliSessionIdToSessionPatch(params, entry, patch);
         },
       });

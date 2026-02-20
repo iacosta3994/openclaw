@@ -486,6 +486,8 @@ export async function runReplyAgent(params: {
       contextTokensUsed,
       systemPromptReport: runResult.meta?.systemPromptReport,
       cliSessionId,
+      lastResponseId: runResult.meta?.agentMeta?.lastResponseId,
+      compactionCount: runResult.meta?.agentMeta?.compactionCount,
     });
 
     // Drain any late tool/block deliveries before deciding there's "nothing to send".
