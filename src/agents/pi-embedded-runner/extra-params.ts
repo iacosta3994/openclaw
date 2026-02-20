@@ -235,6 +235,23 @@ function createAnthropicBetaHeadersWrapper(
 }
 
 /**
+ * Create a streamFn wrapper that forwards custom headers from provider config.
+ * Allows users to set provider-level headers (e.g., `x-grok-conv-id` for xAI
+ * cache grouping) in their model config and have them forwarded to the API.
+ */
+function createProviderHeadersWrapper(
+  baseStreamFn: StreamFn | undefined,
+  providerHeaders: Record<string, string>,
+): StreamFn {
+  const underlying = baseStreamFn ?? streamSimple;
+  return (model, context, options) =>
+    underlying(model, context, {
+      ...options,
+      headers: { ...providerHeaders, ...options?.headers },
+    });
+}
+
+/**
  * Create a streamFn wrapper that adds OpenRouter app attribution headers.
  * These headers allow OpenClaw to appear on OpenRouter's leaderboard.
  */
@@ -295,6 +312,8 @@ export function applyExtraParamsToAgent(
   provider: string,
   modelId: string,
   extraParamsOverride?: Record<string, unknown>,
+  providerHeaders?: Record<string, string>,
+  options?: { isReasoningModel?: boolean; previousResponseId?: string },
 ): void {
   const extraParams = resolveExtraParams({
     cfg,
@@ -328,6 +347,11 @@ export function applyExtraParamsToAgent(
     agent.streamFn = createOpenRouterHeadersWrapper(agent.streamFn);
   }
 
+  if (providerHeaders && Object.keys(providerHeaders).length > 0) {
+    log.debug(`applying provider custom headers for ${provider}/${modelId}`);
+    agent.streamFn = createProviderHeadersWrapper(agent.streamFn, providerHeaders);
+  }
+
   // Enable Z.AI tool_stream for real-time tool call streaming.
   // Enabled by default for Z.AI provider, can be disabled via params.tool_stream: false
   if (provider === "zai" || provider === "z-ai") {
@@ -338,8 +362,75 @@ export function applyExtraParamsToAgent(
     }
   }
 
+  // For xAI reasoning models, request encrypted reasoning content so it can be
+  // replayed on subsequent turns to reduce re-reasoning costs.
+  if (provider === "xai" && options?.isReasoningModel) {
+    log.debug(`requesting encrypted reasoning content for ${provider}/${modelId}`);
+    const prevStreamFn = agent.streamFn ?? streamSimple;
+    agent.streamFn = (model, context, streamOpts) => {
+      const origOnPayload = streamOpts?.onPayload;
+      return prevStreamFn(model, context, {
+        ...streamOpts,
+        onPayload: (payload) => {
+          if (payload && typeof payload === "object") {
+            (payload as { include?: string[] }).include = ["reasoning.encrypted_content"];
+          }
+          origOnPayload?.(payload);
+        },
+      });
+    };
+  }
+
+  // Apply explicit store parameter when provided (e.g., store=false for cron/subagent sessions).
+  const explicitStore = extraParamsOverride?.store;
+  if (typeof explicitStore === "boolean") {
+    log.debug(`applying explicit store=${explicitStore} for ${provider}/${modelId}`);
+    const prevStreamFn = agent.streamFn ?? streamSimple;
+    agent.streamFn = (model, context, streamOpts) => {
+      const origOnPayload = streamOpts?.onPayload;
+      return prevStreamFn(model, context, {
+        ...streamOpts,
+        onPayload: (payload) => {
+          if (payload && typeof payload === "object") {
+            (payload as { store?: boolean }).store = explicitStore;
+          }
+          origOnPayload?.(payload);
+        },
+      });
+    };
+  }
+
+  // Inject previous_response_id for Responses API conversation chaining when available.
+  // This allows the server to maintain conversation state, reducing per-turn input tokens
+  // from ~500K to ~2-5K. Requires store=true on the previous response.
+  //
+  // NOTE: Response ID extraction is not yet implemented — pi-ai does not currently expose
+  // the response `id` field from API responses. When pi-ai adds support (e.g., an
+  // `onResponse` callback or `responseId` field on AssistantMessage), wire it into
+  // options.previousResponseId to activate this optimization.
+  const previousResponseId = options?.previousResponseId;
+  if (typeof previousResponseId === "string" && previousResponseId.length > 0) {
+    log.debug(`injecting previous_response_id for ${provider}/${modelId}`);
+    const prevStreamFn = agent.streamFn ?? streamSimple;
+    agent.streamFn = (model, context, streamOpts) => {
+      const origOnPayload = streamOpts?.onPayload;
+      return prevStreamFn(model, context, {
+        ...streamOpts,
+        onPayload: (payload) => {
+          if (payload && typeof payload === "object") {
+            (payload as { previous_response_id?: string }).previous_response_id =
+              previousResponseId;
+          }
+          origOnPayload?.(payload);
+        },
+      });
+    };
+  }
+
   // Work around upstream pi-ai hardcoding `store: false` for Responses API.
   // Force `store=true` for direct OpenAI/OpenAI Codex providers so multi-turn
   // server-side conversation state is preserved.
+  // NOTE: This only activates for direct OpenAI providers (shouldForceResponsesStore),
+  // so it won't override the explicit store=false set above for xAI/other providers.
   agent.streamFn = createOpenAIResponsesStoreWrapper(agent.streamFn);
 }

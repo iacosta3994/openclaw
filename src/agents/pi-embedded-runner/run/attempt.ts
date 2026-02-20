@@ -639,12 +639,22 @@ export async function runEmbeddedAttempt(
         activeSession.agent.streamFn = streamSimple;
       }
 
+      const providerConfig = params.config?.models?.providers?.[params.provider];
+      const isEphemeralSession =
+        isCronSessionKey(params.sessionKey) || isSubagentSessionKey(params.sessionKey);
+      const effectiveStreamParams =
+        isEphemeralSession && params.streamParams?.store === undefined
+          ? { ...params.streamParams, store: false }
+          : params.streamParams;
+      const isReasoningModel = params.model.reasoning ?? false;
       applyExtraParamsToAgent(
         activeSession.agent,
         params.config,
         params.provider,
         params.modelId,
-        params.streamParams,
+        effectiveStreamParams,
+        providerConfig?.headers,
+        { isReasoningModel },
       );
 
       if (cacheTrace) {
