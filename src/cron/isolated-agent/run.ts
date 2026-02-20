@@ -492,6 +492,7 @@ export async function runCronIsolatedAgentTurn(params: {
           runId: cronSession.sessionEntry.sessionId,
           requireExplicitMessageTarget: true,
           disableMessageTool: deliveryRequested,
+          streamParams: { store: false },
         });
       },
     });
@@ -540,6 +541,9 @@ export async function runCronIsolatedAgentTurn(params: {
       cronSession.sessionEntry.totalTokensFresh = true;
       cronSession.sessionEntry.cacheRead = usage.cacheRead ?? 0;
       cronSession.sessionEntry.cacheWrite = usage.cacheWrite ?? 0;
+      if (usage.reasoningTokens && usage.reasoningTokens > 0) {
+        cronSession.sessionEntry.reasoningTokens = usage.reasoningTokens;
+      }
 
       telemetry = {
         model: modelUsed,

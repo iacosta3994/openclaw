@@ -13,6 +13,8 @@ export type AgentStreamParams = {
   /** Provider stream params override (best-effort). */
   temperature?: number;
   maxTokens?: number;
+  /** Control server-side response storage (Responses API). Set false for ephemeral sessions. */
+  store?: boolean;
 };
 
 export type AgentRunContext = {
